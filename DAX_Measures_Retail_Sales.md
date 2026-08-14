@@ -1,19 +1,19 @@
 # DAX Measures — Retail Sales Portfolio (Power BI)
 
-Referensi lengkap DAX measure & calculated column untuk dataset `retail_sales_dataset.xlsx`
-(tabel: `Transactions`, `Customers`, `Products`, `Stores`).
+Full reference of DAX measures & calculated columns for the `retail_sales_dataset.xlsx` dataset
+(tables: `Transactions`, `Customers`, `Products`, `Stores`).
 
 ---
 
-## 0. Persiapan Data Model
+## 0. Data Model Setup
 
-Sebelum bikin measure, susun dulu:
+Before creating measures, set up the following first:
 
-1. **Buat Date table** (jangan pakai auto date/time bawaan Power BI):
+1. **Create a Date table** (avoid using Power BI's built-in auto date/time):
 ```dax
 DateTable = CALENDAR(MIN(Transactions[Date]), MAX(Transactions[Date]))
 ```
-Lalu tambahkan kolom pendukung:
+Then add supporting columns:
 ```dax
 Year = YEAR(DateTable[Date])
 Month = FORMAT(DateTable[Date], "MMM")
@@ -21,18 +21,18 @@ MonthNumber = MONTH(DateTable[Date])
 Quarter = "Q" & FORMAT(DateTable[Date], "Q")
 ```
 
-2. **Relationship**: hubungkan `DateTable[Date]` → `Transactions[Date]`,
+2. **Relationships**: connect `DateTable[Date]` → `Transactions[Date]`,
    `Customers[CustomerID]` → `Transactions[CustomerID]`,
    `Products[ProductID]` → `Transactions[ProductID]`,
-   `Stores[StoreID]` → `Transactions[StoreID]` (semua one-to-many, single direction).
+   `Stores[StoreID]` → `Transactions[StoreID]` (all one-to-many, single direction).
 
-3. Tandai `DateTable` sebagai **Date Table** (Table tools → Mark as Date Table) supaya time intelligence berfungsi.
+3. Mark `DateTable` as a **Date Table** (Table tools → Mark as Date Table) so time intelligence functions work correctly.
 
 ---
 
-## 1. Calculated Column (di tabel dasar)
+## 1. Calculated Columns (base tables)
 
-**Di tabel `Customers`:**
+**In the `Customers` table:**
 ```dax
 Age = DATEDIFF(Customers[BirthDate], TODAY(), YEAR)
 
@@ -41,14 +41,14 @@ Tenure (Years) = DATEDIFF(Customers[JoinDate], TODAY(), YEAR)
 FullName = Customers[FirstName] & " " & Customers[LastName]
 ```
 
-**Di tabel `Products`:**
+**In the `Products` table:**
 ```dax
 Margin per Unit = Products[UnitPrice] - Products[CostPrice]
 
 Margin % = DIVIDE(Products[Margin per Unit], Products[UnitPrice])
 ```
 
-> **Catatan:** Pada implementasi final, kolom `Sales`, `Profit`, `Cost`, `Year`, `Month`, `MonthNumber`, `Quarter` di tabel `Transactions`, serta `Age`, `Tenure`, `FullName` di `Customers` sudah dihitung lebih awal menggunakan Python (pandas) sebelum data diimport ke Power BI. Measure di bawah ini disusun mengikuti pendekatan tersebut (langsung `SUM` dari kolom hasil olahan), namun formula DAX murni tetap disertakan sebagai referensi/alternatif.
+> **Note:** In the final implementation, the `Sales`, `Profit`, `Cost`, `Year`, `Month`, `MonthNumber`, `Quarter` columns in the `Transactions` table, as well as `Age`, `Tenure`, and `FullName` in `Customers`, were pre-calculated using Python (pandas) before the data was imported into Power BI. The measures below follow that approach (simple `SUM` over the pre-computed columns), but pure DAX formulas are also included as a reference/alternative.
 
 ---
 
@@ -76,7 +76,7 @@ Total Transactions = DISTINCTCOUNT(Transactions[TransactionID])
 Average Order Value = DIVIDE([Total Sales], [Total Transactions])
 ```
 
-**Alternatif (jika Sales/Profit belum dihitung di sumber data, murni DAX):**
+**Alternative (if Sales/Profit aren't pre-calculated in the source data, pure DAX):**
 ```dax
 Total Sales =
 SUMX(
@@ -158,7 +158,7 @@ CALCULATE(
 )
 ```
 
-> **Catatan:** `Sales LY` membandingkan periode yang sama persis (bukan full year) — jika data tahun berjalan baru mencakup sebagian bulan, `Sales LY` juga otomatis hanya menghitung periode yang sama di tahun sebelumnya. Ini perilaku standar dan bukan error.
+> **Note:** `Sales LY` compares the exact same period (not a full calendar year) — if the current year's data only covers a partial period, `Sales LY` will automatically calculate the matching partial period from the prior year. This is expected DAX behavior, not an error.
 
 ---
 
@@ -221,7 +221,7 @@ DIVIDE(
 
 ## Dashboard Pages Reference
 
-| Halaman | Visual Utama |
+| Page | Key Visuals |
 |---|---|
 | **1. Overview** | KPI cards (Total Sales, Profit, AOV, Total Transactions), Year-over-Year table, Sales by Region, Sales by Category (donut), Sales by Month (area chart), Top Products table |
 | **2. Product Performance** | Sortable product table (Sales, Profit, Margin %), Sales by SubCategory, Sales by Category, Scatter chart (Sales vs Profit Margin %) |
@@ -229,5 +229,5 @@ DIVIDE(
 
 ## Formatting Notes
 
-- `Profit Margin %`, `YoY Growth %`, `MoM Growth %`, dan measure persentase lainnya perlu di-set format **Percentage** secara manual (klik measure → Measure tools → Format → Percentage), karena `DIVIDE()` menghasilkan angka desimal (0.19) bukan otomatis jadi persen (19%).
-- Gunakan **slicer** (Year, Category, Region) alih-alih klik langsung ke visual seperti tabel/chart untuk filtering, supaya menghindari filter "tidak sengaja" akibat cross-filtering antar visual.
+- `Profit Margin %`, `YoY Growth %`, `MoM Growth %`, and other percentage measures need to be manually set to **Percentage** format (select the measure → Measure tools → Format → Percentage), since `DIVIDE()` returns a decimal value (0.19) rather than automatically formatting it as a percentage (19%).
+- Use **slicers** (Year, Category, Region) instead of clicking directly on visuals like tables/charts for filtering, to avoid accidental filters caused by cross-filtering between visuals.
